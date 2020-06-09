@@ -620,8 +620,12 @@ static int FAT32_write(const char *path, const char *buffer, size_t size, off_t 
 static int FAT32_truncate (const char *path,off_t offset)
 {
 	struct structura_mis_datos* mis_datos = (struct structura_mis_datos*)fuse_get_context()->private_data;
+	//encuentra pos y encuentra entrada modifican el path, y luego pasa el path de mala manera al write, asique creamos char auxiliar
+	//para que no pete.
+	char conspiracion[strlen(path+1)];
+	strcpy(conspiracion, path);
 	int cap = mis_datos->cluster_size;
-	int posicion = encuentrapos((char *)path,mis_datos) + 28;
+	int posicion = encuentrapos((char *)conspiracion,mis_datos) + 28;
 	
 	int tam_nuevo = offset;
 	fprintf(stderr,"TAM nuevo, truncate: %i\n", tam_nuevo);
