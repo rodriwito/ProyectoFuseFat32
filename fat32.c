@@ -84,6 +84,7 @@ char *get_long_filename(char *cluster_buffer, int entry)
 }
 
 // busca entrada por nombre desde el directorio raiz
+//MODIFICA EL PATH, HABRIA QUE TRATAR ESO
 struct directory_entry *encuentra_entrada(char *path, struct structura_mis_datos *mis_datos)
 {
     int next = mis_datos->bpb->root_cluster_number;
@@ -167,7 +168,7 @@ struct directory_entry *encuentra_entrada(char *path, struct structura_mis_datos
     return NULL; // terminamos de buscar y no encontramos el path
 }
 
-
+//MODIFICA EL PATH, HABRIA QUE TRATAR ESO
 int encuentrapos(char *path, struct structura_mis_datos *mis_datos)
 {
     int next = mis_datos->bpb->root_cluster_number;
@@ -237,59 +238,6 @@ int encuentrapos(char *path, struct structura_mis_datos *mis_datos)
     return 0; // terminamos de buscar y no encontramos el path
 }
 
-//Los contenidos no se borran recursivamente asique esta funcion no haria falta.
-//No esta revisada asique puede tener problemas.
-/*
-//Al final hepuesto el cluster entero a 0 cuando se termina;
-void borrar_contenido_dir(int next,struct structura_mis_datos *mis_datos)
-{
-	int posicion_inicial;
-	int next_aux;
-	int* TIPO = (int*)malloc(4);
-	int alto,bajo,cero;
-	int cluster,cluster_ant;
-	
-	while(1){
-		posicion_inicial = mis_datos->clusters_offset + (next - mis_datos->bpb->root_cluster_number)* mis_datos->cluster_size;
-		int x;
-		for(x=0;x<mis_datos->num_entries;x++){
-			pread(mis_datos->fh, (void*) &cero, 1, posicion_inicial + x*32);
-			if(cero == '0'){
-				x = 0;
-				break;
-			}
-			pread(mis_datos->fh, (void*) TIPO, 1, posicion_inicial + x*32 + 11);
-			pread(mis_datos->fh, (void*) &alto, 2, posicion_inicial + x*32 + 21);
-			pread(mis_datos->fh, (void*) &bajo, 2, posicion_inicial + x*32 + 27);
-			fprintf(stderr,"que hemos leido: %i\n y a donde vamos: %i,%i\n",*TIPO, alto,bajo);
-			cluster = ((alto<<16)|bajo);
-			if(*TIPO==ATTR_ARCHIVE){
-				fprintf(stderr,"Es un archivo\n");
-				while((cluster&FIN) != FIN){
-					cluster_ant = cluster;
-					cluster = readFAT(cluster,mis_datos);
-					writeFAT(cluster_ant, 0 , mis_datos);
-				}
-				writeFAT(cluster, 0 , mis_datos);
-			}else if(*TIPO == ATTR_DIRECTORY){
-				fprintf(stderr,"Es un directorio\n");
-				borrar_contenido_dir(cluster,mis_datos);
-			}
-		}
-		//Borro toda la informacion dentro del cluster, nose si es necesario
-		pwrite(mis_datos->fh, (void*) 0, mis_datos->cluster_size, posicion_inicial);
-		
-		next_aux = next;
-		next = readFAT(next,mis_datos);
-		writeFAT(next_aux,0,mis_datos);
-		
-		if((next&FIN) == FIN){
-			return;
-		}
-	}
-}
-* 
-*/
 
 // convierte el formato de la fecha
 time_t conv_time(uint16_t date_entry, uint16_t time_entry) {
@@ -312,7 +260,7 @@ time_t conv_time(uint16_t date_entry, uint16_t time_entry) {
 //Habria que acotarlo al numero de bloques en la FAT
 
 //(mis_datos->bpb->sectors_per_fat * mis_datos->bpb->bytes_sector)/4
-int EncontrarPosLibre(struct structura_mis_datos *mis_datos){
+int encontrarPosLibre(struct structura_mis_datos *mis_datos){
 	int i = 0;
 	while(i != (mis_datos->bpb->sectors_per_fat * mis_datos->bpb->bytes_sector/4)){
 		if(readFAT(i,mis_datos) == 0){
@@ -541,21 +489,6 @@ static int FAT32_write(const char *path, const char *buffer, size_t size, off_t 
 	fprintf(stderr,"TAM antiguo: %i\n", tam_ant);
 	//Si escribimos en medio nos olvidamos del resto del archivo;
 	if(tam_ant>offset) tam_ant = tam_ant-offset;
-/*	
-	if(*tam_ant != 0){
-		if(*tam_ant == offset){
-			fprintf(stderr,"Estamos escribiendo al final\n");
-			//Ignoramos el salto de linea de final de fichero.
-			offset--;
-		}else{
-			fprintf(stderr,"Estamos escribiendo en medio\n");
-			//ignoramos el salto de linea del final del buffer
-			size--;
-		}
-		
-		*tam_ant = *tam_ant-1;
-	}
-	*/
 	tam_ant = tam_ant + size;
 	fprintf(stderr,"TAM nuevo: %i,size añadido: %li\n", tam_ant,size);
 	pwrite(mis_datos->fh, &tam_ant, 4, posicion);
@@ -574,7 +507,7 @@ static int FAT32_write(const char *path, const char *buffer, size_t size, off_t 
 		next2 = readFAT(next2,mis_datos);
 		if((next2&FIN) == FIN || next2 == 0){
 			fprintf(stderr,"Nuevo cluster adjudicado\n");
-			next2 = EncontrarPosLibre(mis_datos);
+			next2 = encontrarPosLibre(mis_datos);
 			//Escribir En la parte de la fat que indica next_ant el valor de next2
 			writeFAT(next_ant,next2,mis_datos);
 		}
@@ -628,18 +561,13 @@ static int FAT32_truncate (const char *path,off_t offset)
 	int posicion = encuentrapos((char *)conspiracion,mis_datos) + 28;
 	
 	int tam_nuevo = offset;
-	fprintf(stderr,"TAM nuevo, truncate: %i\n", tam_nuevo);
 	pwrite(mis_datos->fh, &tam_nuevo, 4, posicion);
 	
 	//No modifico el numero de cluster, porque cuando escribimos estos se modifican por si solos.
-	
-	
 	return offset;
 }
 
-//NO DEJA BORRAR SI TIENE CONTENIDOS.
-//Como poner mensajito.
-//Me lee el e5 como -27 en readdir
+//NO DEBE DEJAR BORRAR SI TIENE CONTENIDOS.
 static int FAT32_rmdir(const char* path)
 {
 	
@@ -675,6 +603,7 @@ static int FAT32_rmdir(const char* path)
 			{
 				char *name = get_long_filename(cluster_buffer, i);
 				fprintf(stderr,"Nombre del fichero que se mete en buffer: %s\n",name);
+				//SI NO ES . O .. DEVOLVER 0
 				if(strncmp(name,".",1) && strncmp(name,"..",2)){
 					free(name);
 					return 0;
@@ -683,8 +612,7 @@ static int FAT32_rmdir(const char* path)
 			}
 		}
 		cluster = readFAT(cluster,mis_datos);
-		readCLUSTER(cluster, cluster_buffer, mis_datos);
-		fprintf(stderr,"Siguiente cluster: %d\n",cluster);		
+		readCLUSTER(cluster, cluster_buffer, mis_datos);	
 	}
     free(cluster_buffer);
     
@@ -715,7 +643,6 @@ static int FAT32_unlink(const char* path){
 	pread(mis_datos->fh,&bajo,2,pos + 26);
 	
     int cluster = ((alto<<16)|bajo);
-    fprintf(stderr,"Valor del cluster a poner a 0 en unlink: %i\n",cluster); 
 	int cluster2;
 	
 	//ponemos suus clusters a 0
