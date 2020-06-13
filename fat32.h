@@ -112,7 +112,7 @@ struct structura_mis_datos {
 #define ATTR_ARCHIVE 0x20
 
 #define FIN 0xFFFFFF0
-#define FINCLUS 0xFFFFFF
+#define FINCLUS 0xFFFFFFF
 #define ATTR_LONG_NAME 0x0F
 #define ATTR_DELETED 0xE5   // al principio del nombre
 
