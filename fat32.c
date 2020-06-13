@@ -535,16 +535,13 @@ static int FAT32_write(const char *path, const char *buffer, size_t size, off_t 
 	
 	while((next&FIN)!=FIN){
 		if(offset>=cap){
-			fprintf(stderr,"1\n");
 			offset-=cap;
 		}else{
-			fprintf(stderr,"2\n");
 			texto = buffer + escrito;
 			pwrite(mis_datos->fh, (void*) texto, cap-offset, mis_datos->clusters_offset + (next- mis_datos->bpb->root_cluster_number)* cap +offset);
 			escrito = cap-offset;
 			offset = 0;
 		}
-		fprintf(stderr,"4\n");
 		next = readFAT(next,mis_datos);
 	}
     return size;
