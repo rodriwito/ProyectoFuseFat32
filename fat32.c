@@ -539,7 +539,7 @@ static int FAT32_write(const char *path, const char *buffer, size_t size, off_t 
 		}else{
 			texto = buffer + escrito;
 			pwrite(mis_datos->fh, (void*) texto, cap-offset, mis_datos->clusters_offset + (next- mis_datos->bpb->root_cluster_number)* cap +offset);
-			escrito = cap-offset;
+			escrito += cap-offset;
 			offset = 0;
 		}
 		next = readFAT(next,mis_datos);
